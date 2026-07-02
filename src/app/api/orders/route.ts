@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createServerSupabaseClient()
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
-    const status = searchParams.get('status')
+    const status = searchParams.get('status') as 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded' | null
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
