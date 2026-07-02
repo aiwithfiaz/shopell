@@ -36,15 +36,48 @@ const statusIcons: Record<string, React.ComponentType<any>> = {
   cancelled: XCircle,
 }
 
+interface OrderItem {
+  name: string
+  price: number
+  quantity: number
+  image: string
+}
+
+interface Order {
+  id: string
+  items: OrderItem[]
+  total: number
+  status: string
+  paymentMethod: string
+  shippingAddress: string
+  createdAt: string
+}
+
 export default function OrdersPage() {
   const router = useRouter()
-  const { user, orders } = useAuth()
+  const { user } = useAuth()
+  const [orders, setOrders] = React.useState<Order[]>([])
   const [selectedOrder, setSelectedOrder] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     if (!user) {
       router.push('/auth/login')
+      return
     }
+
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch(`/api/orders?userId=${user.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setOrders(data.orders || [])
+        }
+      } catch {
+        // Failed to fetch orders
+      }
+    }
+
+    fetchOrders()
   }, [user, router])
 
   if (!user) return null
