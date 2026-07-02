@@ -33,7 +33,7 @@ export const {
         const client = await clientPromise
         const db = client.db('shopell')
         const user = await db.collection('users').findOne({
-          email: credentials.email.toLowerCase(),
+          email: String(credentials.email).toLowerCase(),
         })
 
         if (!user) {
