@@ -34,7 +34,7 @@ const shippingMethods = [
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, totalPrice, totalItems, clearCart, couponCode, couponDiscount } = useCartStore()
-  const { addOrder } = useAuth()
+  useAuth()
   const [step, setStep] = React.useState(1)
   const [selectedShipping, setSelectedShipping] = React.useState('standard')
   const [selectedPayment, setSelectedPayment] = React.useState('cod')
@@ -150,37 +150,10 @@ export default function CheckoutPage() {
       })
       
       if (res.ok) {
-        const data = await res.json()
-        addOrder({
-          id: orderNum,
-          items: items.map(item => ({
-            name: item.product.name,
-            price: item.product.price,
-            quantity: item.quantity,
-            image: item.product.image,
-          })),
-          total: total,
-          status: 'pending',
-          paymentMethod: selectedPayment === 'cod' ? 'Cash on Delivery' : selectedPayment === 'credit-card' ? 'Credit Card' : 'PayPal',
-          shippingAddress: shippingAddr,
-          createdAt: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-        })
+        await res.json()
       }
     } catch {
-      addOrder({
-        id: orderNum,
-        items: items.map(item => ({
-          name: item.product.name,
-          price: item.product.price,
-          quantity: item.quantity,
-          image: item.product.image,
-        })),
-        total: total,
-        status: 'pending',
-        paymentMethod: selectedPayment === 'cod' ? 'Cash on Delivery' : selectedPayment === 'credit-card' ? 'Credit Card' : 'PayPal',
-        shippingAddress: shippingAddr,
-        createdAt: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-      })
+      // Order failed
     }
     
     setOrderNumber(orderNum)
