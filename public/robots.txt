@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /checkout/
+Disallow: /cart/
+Disallow: /admin/
+Disallow: /user/
+Disallow: /auth/
+
+# Block internal search results
+Disallow: /search?
+
+# Allow product, category, content pages
+Allow: /products/
+Allow: /categories/
+Allow: /blog/
+
+Sitemap: https://shopell.com/sitemap.xml

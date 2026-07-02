@@ -1,0 +1,9 @@
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.100.26:3000
+- Environments: .env.local, .env
+✓ Ready in 2.4s
+⚠ Slow filesystem detected. The benchmark took 1017ms. If D:\OpenCode and Claud Code\Shopell\shopell\.next/dev is a network drive, consider moving it to a local folder.
+See more: https://nextjs.org/docs/app/guides/local-development
+
+ GET / 200 in 5.5s (next.js: 5.0s, application-code: 508ms)

@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id                  String    @id @default(uuid()) @db.Uuid
+  email               String    @unique
+  fullName            String?   @map("full_name")
+  avatarUrl           String?   @map("avatar_url")
+  phoneNumber         String?   @map("phone_number")
+  userType            String    @default("customer") @map("user_type")
+  companyName         String?   @map("company_name")
+  taxId               String?   @map("tax_id")
+  billingAddress      Json?     @map("billing_address")
+  shippingAddress     Json?     @map("shipping_address")
+  preferredCurrency   String    @default("USD") @map("preferred_currency")
+  languagePreference  String    @default("en") @map("language_preference")
+  marketingConsent    Boolean   @default(false) @map("marketing_consent")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  organizationMembers OrgMember[]
+  products            Product[]
+  orders              Order[]
+  reviews             Review[]
+  carts               Cart[]
+  auditLogs           AuditLog[]
+
+  @@map("profiles")
+}
+
+model Organization {
+  id                    String    @id @default(uuid()) @db.Uuid
+  name                  String
+  slug                  String    @unique
+  logoUrl               String?   @map("logo_url")
+  primaryContactEmail   String?   @map("primary_contact_email")
+  billingEmail          String?   @map("billing_email")
+  subscriptionTier      String    @default("starter") @map("subscription_tier")
+  subscriptionStatus    String    @default("active") @map("subscription_status")
+  settings              Json      @default("{}")
+  metadata              Json      @default("{}")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  deletedAt             DateTime? @map("deleted_at")
+
+  members               OrgMember[]
+  products              Product[]
+  orders                Order[]
+  auditLogs             AuditLog[]
+
+  @@map("organizations")
+}
+
+model OrgMember {
+  id              String    @id @default(uuid()) @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  role            String
+  permissions     Json      @default("[]")
+  joinedAt        DateTime  @default(now()) @map("joined_at")
+  invitedBy       String?   @map("invited_by") @db.Uuid
+  status          String    @default("active")
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("org_members")
+}
+
+model Product {
+  id                String    @id @default(uuid()) @db.Uuid
+  organizationId    String    @map("organization_id") @db.Uuid
+  sku               String    @unique
+  name              String
+  description       String?
+  shortDescription  String?   @map("short_description")
+  category          String?
+  subcategory       String?
+  brand             String?
+  tags              String[]
+  variants          Json      @default("[]")
+  attributes        Json      @default("{}")
+  basePrice         Decimal   @map("base_price") @db.Decimal(10, 2)
+  compareAtPrice    Decimal?  @map("compare_at_price") @db.Decimal(10, 2)
+  costPerUnit       Decimal?  @map("cost_per_unit") @db.Decimal(10, 2)
+  marginPercentage  Decimal?  @map("margin_percentage") @db.Decimal(5, 2)
+  stockQuantity     Int       @default(0) @map("stock_quantity")
+  lowStockThreshold Int       @default(5) @map("low_stock_threshold")
+  weightKg          Decimal?  @map("weight_kg") @db.Decimal(8, 2)
+  dimensions        Json?
+  images            String[]
+  videoUrls         String[]  @map("video_urls")
+  seoMetadata       Json?     @map("seo_metadata")
+  status            String    @default("draft")
+  visibility        String    @default("public")
+  createdBy         String?   @map("created_by") @db.Uuid
+  updatedBy         String?   @map("updated_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inventory         Inventory[]
+  reviews           Review[]
+
+  @@map("products")
+}
+
+model Inventory {
+  id                String    @id @default(uuid()) @db.Uuid
+  productId         String    @map("product_id") @db.Uuid
+  warehouseId       String?   @map("warehouse_id") @db.Uuid
+  location          String?
+  quantity          Int       @default(0)
+  reservedQuantity  Int       @default(0) @map("reserved_quantity")
+  reorderPoint      Int       @default(10) @map("reorder_point")
+  reorderQuantity   Int       @default(50) @map("reorder_quantity")
+  lastRestockedAt   DateTime? @map("last_restocked_at")
+  nextRestockDate   DateTime? @map("next_restock_date")
+  supplierInfo      Json?     @map("supplier_info")
+  status            String    @default("in_stock")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("inventory")
+}
+
+model Order {
+  id                  String    @id @default(uuid()) @db.Uuid
+  organizationId      String    @map("organization_id") @db.Uuid
+  orderNumber         String    @unique @map("order_number")
+  customerId          String?   @map("customer_id") @db.Uuid
+  guestEmail          String?   @map("guest_email")
+  guestPhone          String?   @map("guest_phone")
+  status              String    @default("pending")
+  paymentStatus       String    @default("unpaid") @map("payment_status")
+  fulfillmentStatus   String    @default("unfulfilled") @map("fulfillment_status")
+  items               Json
+  subtotal            Decimal   @db.Decimal(10, 2)
+  taxAmount           Decimal   @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  discountAmount      Decimal   @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  shippingCost        Decimal   @default(0) @map("shipping_cost") @db.Decimal(10, 2)
+  totalAmount         Decimal   @map("total_amount") @db.Decimal(10, 2)
+  currency            String    @default("USD")
+  shippingAddress     Json?     @map("shipping_address")
+  billingAddress      Json?     @map("billing_address")
+  shippingMethod      String?   @map("shipping_method")
+  trackingNumber      String?   @map("tracking_number")
+  carrier             String?
+  estimatedDelivery   DateTime? @map("estimated_delivery")
+  actualDelivery      DateTime? @map("actual_delivery")
+  notes               String?
+  internalNotes       String?   @map("internal_notes")
+  metadata            Json?
+  createdBy           String?   @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer            Profile?     @relation(fields: [customerId], references: [id])
+  payments            Payment[]
+  reviews             Review[]
+
+  @@map("orders")
+}
+
+model Payment {
+  id                      String    @id @default(uuid()) @db.Uuid
+  orderId                 String    @map("order_id") @db.Uuid
+  paymentMethod           String    @map("payment_method")
+  paymentProvider         String?   @map("payment_provider")
+  providerTransactionId   String?   @map("provider_transaction_id")
+  amount                  Decimal   @db.Decimal(10, 2)
+  currency                String    @default("USD")
+  status                  String    @default("pending")
+  paymentDate             DateTime? @map("payment_date")
+  refundAmount            Decimal   @default(0) @map("refund_amount") @db.Decimal(10, 2)
+  refundReason            String?   @map("refund_reason")
+  gatewayResponse         Json?     @map("gateway_response")
+  metadata                Json?
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  order                   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model Cart {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String?   @map("user_id") @db.Uuid
+  sessionId       String?   @map("session_id")
+  items           Json      @default("[]")
+  totalItems      Int       @default(0) @map("total_items")
+  totalPrice      Decimal   @default(0) @map("total_price") @db.Decimal(10, 2)
+  currency        String    @default("USD")
+  couponCode      String?   @map("coupon_code")
+  discountAmount  Decimal   @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  expiresAt       DateTime  @default(now()) @map("expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user            Profile? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("carts")
+}
+
+model Review {
+  id                String    @id @default(uuid()) @db.Uuid
+  productId         String    @map("product_id") @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  orderId           String?   @map("order_id") @db.Uuid
+  rating            Int
+  title             String?
+  content           String?
+  pros              String[]
+  cons              String[]
+  images            String[]
+  verifiedPurchase  Boolean   @default(false) @map("verified_purchase")
+  helpfulCount      Int       @default(0) @map("helpful_count")
+  reported          Boolean   @default(false)
+  status            String    @default("pending")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user              Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order             Order?  @relation(fields: [orderId], references: [id])
+
+  @@unique([productId, userId])
+  @@map("reviews")
+}
+
+model AuditLog {
+  id              String    @id @default(uuid()) @db.Uuid
+  organizationId  String?   @map("organization_id") @db.Uuid
+  userId          String?   @map("user_id") @db.Uuid
+  action          String
+  resourceType    String    @map("resource_type")
+  resourceId      String?   @map("resource_id") @db.Uuid
+  changes         Json?
+  ipAddress       String?   @map("ip_address") @db.Inet
+  userAgent       String?   @map("user_agent")
+  metadata        Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  user            Profile?      @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
